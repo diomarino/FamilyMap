@@ -34,6 +34,7 @@ import com.joanzapata.iconify.IconDrawable;
 import com.joanzapata.iconify.fonts.FontAwesomeIcons;
 import com.marinoo.familymap.R;
 import com.marinoo.familymap.cmodel.FamilyTree;
+import com.marinoo.familymap.cmodel.Filter;
 import com.marinoo.familymap.cmodel.Settings;
 import com.marinoo.familymap.model.Event;
 import com.marinoo.familymap.model.Person;
@@ -47,9 +48,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     private SupportMapFragment supportMapFragment;
     private GoogleMap myGoogleMap;
     private Event mapsCenteredEvent;
-    private  View thisView;
+    private View thisView;
     private boolean markerClicked = false;
     private boolean isEventActivity = false;
+    private boolean initialTreeLine = true;
     private ArrayList<Polyline> spousePolyLine = new ArrayList<>();
     private ArrayList<Polyline> lifeStoryLine = new ArrayList<>();
     private ArrayList<Polyline> familyTreeLine = new ArrayList<>();
@@ -70,14 +72,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         super.onCreate(savedInstanceState);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     @Override
     public void onResume() {
         super.onResume();
 
-        if (!Settings.getInstance().isShowSpouseLines() && !spousePolyLine.isEmpty()) {
+        remakeMarkers();
+
+        if ((!Settings.getInstance().isShowSpouseLines() && !spousePolyLine.isEmpty())) {
 
             for (Polyline polyline : spousePolyLine) {
                 polyline.remove();
+            }
+
+        } else {
+
+            if ((Filter.getInstance().isShowFemaleEvents() && !Filter.getInstance().isShowMaleEvents()) ||
+                    (Filter.getInstance().isShowMaleEvents() && !Filter.getInstance().isShowFemaleEvents())) {
+
+                for (Polyline polyline : spousePolyLine) {
+                    polyline.remove();
+                }
             }
         }
 
@@ -94,6 +109,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
                 polyline.remove();
             }
         }
+
+        if (mapsCenteredEvent != null) {
+            clickMarker(thisView);
+        }
+
     }
 
     @Override
@@ -145,6 +165,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     private void makeMarkers(View v) {
 
+        thisView = v;
         FamilyTree familyTree = FamilyTree.getInstance();
         Map<String, Event> events = familyTree.getEventMap();
         Person loggedInUser = familyTree.getLoggedInUser();
@@ -189,6 +210,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 
                 if (currentEvent.getEventID().equals(mapsCenteredEvent.getEventID())) {
 
+                    mapMarkers = Filter.getInstance().getMapMarkers();
+                    initialTreeLine = false;
+                    remakeMarkers();
+
                     markerClicked = true;
                     LatLng centerEvent = new LatLng(mapsCenteredEvent.getLatitude(), mapsCenteredEvent.getLongitude());
                     myGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(centerEvent));
@@ -219,6 +244,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             }
         }
 
+        if(initialTreeLine) {
+            Filter.getInstance().setMapMarkers(mapMarkers);
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
@@ -249,7 +277,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
             if (Settings.getInstance().isShowSpouseLines()) {
 
                 if (!selectedPerson.getSpouseID().equals(null) || !selectedPerson.getSpouseID().equals("")) {
-                    makeSpouseLine(selectedPerson, mapsCenteredEvent);
+
+                    if (Filter.getInstance().isShowMaleEvents() && Filter.getInstance().isShowFemaleEvents()) {
+                        makeSpouseLine(selectedPerson, mapsCenteredEvent);
+                    }
                 }
             }
 
@@ -257,8 +288,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
                 makeLifeStoryLine(selectedPerson);
             }
 
-            if (Settings.getInstance().isShowFamilyTreeLines()) {
+            if (Settings.getInstance().isShowFamilyTreeLines() && initialTreeLine) {
+
+                initialTreeLine = false;
                 makeFamilyTreeLine(selectedPerson, mapsCenteredEvent);
+
+            } else if (!Settings.getInstance().isShowFamilyTreeLines()) {
+
+            } else {
+
+                for (Polyline polyline : familyTreeLine) {
+                    polyline.remove();
+                }
+
+                remakeFamilyTreeLine(selectedPerson, mapsCenteredEvent);
             }
 
         } else {
@@ -323,15 +366,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 
         ArrayList<Event> lifeStoryEvents = FamilyTree.getInstance().getPeoplesEventsMap().get(selectedPerson.getPersonID());
         PolylineOptions polylineOptions = new PolylineOptions();
-        int initialWidth = 14;
 
         for (int i = 0; i < lifeStoryEvents.size(); i++) {
 
-            polylineOptions.add(new LatLng(lifeStoryEvents.get(i).getLatitude(), lifeStoryEvents.get(i).getLongitude()));
-            polylineOptions.color(Color.BLUE).width(initialWidth);
+            Event event = lifeStoryEvents.get(i);
+            polylineOptions.add(new LatLng(event.getLatitude(), event.getLongitude()));
+            polylineOptions.color(Color.BLUE).width(14);
             Polyline polyline = myGoogleMap.addPolyline(polylineOptions);
             lifeStoryLine.add(polyline);
-            initialWidth/=2;
+
         }
     }
 
@@ -346,18 +389,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
                 PolylineOptions polylineOptions = new PolylineOptions();
                 polylineOptions.add(new LatLng(selectedEvent.getLatitude(), selectedEvent.getLongitude()));
                 polylineOptions.add(new LatLng(parentEvents.get(0).getLatitude(), parentEvents.get(0).getLongitude()));
-                polylineOptions.color(Color.DKGRAY).width(14);
+                polylineOptions.color(Color.DKGRAY).width(16);
                 Polyline polyline = myGoogleMap.addPolyline(polylineOptions);
                 familyTreeLine.add(polyline);
-                makeAncestorsFamilyTreeLine(parent, 14);
+                makeAncestorsFamilyTreeLine(parent, 16);
             }
         }
     }
 
-    private void makeAncestorsFamilyTreeLine(Person person, float lineWidth) {
+    private void makeAncestorsFamilyTreeLine(Person person, int lineWidth) {
 
         Set<Person> parentSet = FamilyTree.getInstance().getParentSet(person);
-        lineWidth = lineWidth / 2;
+        lineWidth /= 2;
+        if (lineWidth == 0) {
+            lineWidth = 3;
+        }
+
         for (Person parent : parentSet) {
 
             if (parent != null) {
@@ -379,7 +426,163 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
         }
     }
 
+    private void remakeMarkers() {
 
+        for (Marker marker : mapMarkers) {
+            Event event = (Event) marker.getTag();
+            Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+
+            if (Filter.getInstance().isShowMotherSide() && Filter.getInstance().isShowFatherSide() &&
+                    Filter.getInstance().isShowFemaleEvents() && Filter.getInstance().isShowMaleEvents()) {
+                marker.setVisible(true);
+
+            } else if (Filter.getInstance().isShowMotherSide() && !Filter.getInstance().isShowFatherSide()) {
+                checkMaternalFilter(marker);
+
+            } else if (Filter.getInstance().isShowFatherSide() && !Filter.getInstance().isShowMotherSide()) {
+                checkPaternalFilter(marker);
+
+            } else {
+
+                if (person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getPersonID()) ||
+                        person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getSpouseID())) {
+
+                    marker.setVisible(true);
+
+                } else {
+
+                    marker.setVisible(false);
+                }
+            }
+
+            if (marker.isVisible()) {
+
+                if (Filter.getInstance().isShowFemaleEvents() && Filter.getInstance().isShowMaleEvents()) {
+                    marker.setVisible(true);
+
+                } else if (Filter.getInstance().isShowFemaleEvents() && !Filter.getInstance().isShowMaleEvents()) {
+
+                    if (!person.getGender().equals("f")) {
+                        marker.setVisible(false);
+                    }
+
+                } else if (Filter.getInstance().isShowMaleEvents() && !Filter.getInstance().isShowFemaleEvents()) {
+
+                    if (!person.getGender().equals("m")) {
+                        marker.setVisible(false);
+                    }
+
+                } else {
+                    marker.setVisible(false);
+                }
+            }
+        }
+    }
+
+    private void checkMaternalFilter(Marker marker) {
+
+        Event event = (Event) marker.getTag();
+        Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+        Set<Person> maternalSet = FamilyTree.getInstance().getMaternalAncestors();
+
+
+        if (person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getPersonID()) ||
+                person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getSpouseID())
+            || maternalSet.contains(person)) {
+
+            marker.setVisible(true);
+
+        } else {
+            marker.setVisible(false);
+        }
+    }
+
+    private void checkPaternalFilter(Marker marker) {
+
+        Event event = (Event) marker.getTag();
+        Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+        Set<Person> paternalSet = FamilyTree.getInstance().getPaternalAncestors();
+
+
+        if (person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getPersonID()) ||
+                person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getSpouseID())
+                || paternalSet.contains(person)) {
+
+            marker.setVisible(true);
+
+        } else {
+            marker.setVisible(false);
+        }
+    }
+
+    private void remakeFamilyTreeLine(Person person, Event selectedEvent) {
+
+        Set<Person> parentSet = FamilyTree.getInstance().getParentSet(person);
+        for (Person parent : parentSet) {
+
+            if (parent != null) {
+
+                ArrayList<Event> parentEvents = FamilyTree.getInstance().getPeoplesEventsMap().get(parent.getPersonID());
+                PolylineOptions polylineOptions = new PolylineOptions();
+                for (Marker parentMarker : mapMarkers) {
+
+                    if (parentMarker.isVisible()) {
+
+                        Event parentEvent = (Event) parentMarker.getTag();
+
+                        if (parentEvent.getEventID().equals(parentEvents.get(0).getEventID())) {
+
+                            polylineOptions.add(new LatLng(selectedEvent.getLatitude(), selectedEvent.getLongitude()));
+                            polylineOptions.add(new LatLng(parentEvents.get(0).getLatitude(), parentEvents.get(0).getLongitude()));
+                            polylineOptions.color(Color.DKGRAY).width(18);
+                            Polyline polyline = myGoogleMap.addPolyline(polylineOptions);
+                            familyTreeLine.add(polyline);
+                            remakeAncestorsFamilyTreeLine(parent, 18);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private void remakeAncestorsFamilyTreeLine(Person person, int lineWidth) {
+
+        lineWidth /= 2;
+        if (lineWidth == 0) {
+            lineWidth = 3;
+        }
+
+        Set<Person> parentSet = FamilyTree.getInstance().getParentSet(person);
+        for (Person parent : parentSet) {
+
+            if (parent != null) {
+
+                ArrayList<Event> parentEvents = FamilyTree.getInstance().getPeoplesEventsMap().get(parent.getPersonID());
+                ArrayList<Event> personEvents = FamilyTree.getInstance().getPeoplesEventsMap().get(person.getPersonID());
+                PolylineOptions polylineOptions = new PolylineOptions();
+
+                for (Marker marker : mapMarkers) {
+
+                    Event event = (Event) marker.getTag();
+
+                    if (marker.isVisible()) {
+
+                        if (event.getEventID().equals(personEvents.get(0).getEventID())) {
+                            polylineOptions.add(new LatLng(personEvents.get(0).getLatitude(), personEvents.get(0).getLongitude()));
+
+                        } else if (event.getEventID().equals(parentEvents.get(0).getEventID())) {
+                            polylineOptions.add(new LatLng(parentEvents.get(0).getLatitude(), parentEvents.get(0).getLongitude()));
+                        }
+                    }
+                }
+                polylineOptions.color(Color.DKGRAY).width(lineWidth);
+                Polyline polyline = myGoogleMap.addPolyline(polylineOptions);
+                familyTreeLine.add(polyline);
+                remakeAncestorsFamilyTreeLine(parent, lineWidth);
+            }
+        }
+    }
 
     public boolean isEventActivity() {
         return isEventActivity;

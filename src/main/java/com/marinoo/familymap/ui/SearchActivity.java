@@ -20,10 +20,14 @@ import com.joanzapata.iconify.IconDrawable;
 import com.joanzapata.iconify.fonts.FontAwesomeIcons;
 import com.marinoo.familymap.R;
 import com.marinoo.familymap.cmodel.FamilyTree;
+import com.marinoo.familymap.cmodel.Filter;
 import com.marinoo.familymap.model.Event;
 import com.marinoo.familymap.model.Person;
+
+import java.security.spec.ECField;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class SearchActivity extends AppCompatActivity implements SearchView.OnQueryTextListener {
 
@@ -78,6 +82,7 @@ public class SearchActivity extends AppCompatActivity implements SearchView.OnQu
         for (Person person : people) {
 
             if (person.getFirstName().toLowerCase().contains(userInput) || person.getLastName().toLowerCase().contains(userInput)) {
+
                 updatedPeople.add(person);
             }
         }
@@ -88,10 +93,28 @@ public class SearchActivity extends AppCompatActivity implements SearchView.OnQu
 
             if (event.getEventType().toLowerCase().contains(userInput) || event.getCountry().toLowerCase().contains(userInput) ||
             event.getCity().toLowerCase().contains(userInput)) {
-                updatedEvents.add(event);
+
+                Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+
+                if (Filter.getInstance().isShowFemaleEvents() && Filter.getInstance().isShowMaleEvents()) {
+                    updatedEvents.add(event);
+
+                }else if (Filter.getInstance().isShowFemaleEvents() && !Filter.getInstance().isShowMaleEvents()) {
+
+                    if (person.getGender().equals("f")) {
+                        updatedEvents.add(event);
+                    }
+
+                }else if (Filter.getInstance().isShowMaleEvents() && !Filter.getInstance().isShowFemaleEvents()) {
+
+                    if (person.getGender().equals("m")) {
+                        updatedEvents.add(event);
+                    }
+                }
             }
         }
 
+        updatedEvents = updateEventsBySide(updatedEvents, userInput);
         recyclerViewAdapter.updateListEvents(updatedEvents);
 
         return true;
@@ -198,7 +221,7 @@ public class SearchActivity extends AppCompatActivity implements SearchView.OnQu
             this.currentPerson = person;
             name.setText(person.getFirstName() + " " + person.getLastName());
 
-            if (person.getGender() == "f") {
+            if (person.getGender().equals("f")) {
                 Drawable femaleIcon = new IconDrawable(context, FontAwesomeIcons.fa_female).colorRes(R.color.femaleColor).sizeDp(50);
                 gender.setImageDrawable(femaleIcon);
             } else {
@@ -294,5 +317,38 @@ public class SearchActivity extends AppCompatActivity implements SearchView.OnQu
 
             return null;
         }
+    }
+
+    private List<Event> updateEventsBySide(List<Event> events, String userInput) {
+
+        List<Event> filteredEvents = new ArrayList<>();
+        for (Event event : events) {
+
+            if (event.getEventType().toLowerCase().contains(userInput) || event.getCountry().toLowerCase().contains(userInput) ||
+                    event.getCity().toLowerCase().contains(userInput)) {
+
+                if (Filter.getInstance().isShowMotherSide() && Filter.getInstance().isShowFatherSide()) {
+                    filteredEvents.add(event);
+
+                } else if (Filter.getInstance().isShowMotherSide() && !Filter.getInstance().isShowFatherSide()) {
+
+                    Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+                    Set<Person> maternalSet = FamilyTree.getInstance().getMaternalAncestors();
+                    if (maternalSet.contains(person)) {
+                        filteredEvents.add(event);
+                    }
+
+                } else if (Filter.getInstance().isShowFatherSide() && !Filter.getInstance().isShowMotherSide()) {
+
+                    Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+                    Set<Person> paternalSet = FamilyTree.getInstance().getPaternalAncestors();
+                    if (paternalSet.contains(person)) {
+                        filteredEvents.add(event);
+                    }
+                }
+            }
+        }
+
+        return filteredEvents;
     }
 }

@@ -60,7 +60,6 @@ public class LoginFragment extends Fragment {
         reqServerHost.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                //Intentionally left blank
             }
 
             @Override
@@ -80,7 +79,6 @@ public class LoginFragment extends Fragment {
         reqServerPort.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                //Intentionally left blank
             }
 
             @Override
@@ -100,7 +98,6 @@ public class LoginFragment extends Fragment {
         reqUsername.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                //Intentionally left blank
             }
 
             @Override
@@ -120,7 +117,6 @@ public class LoginFragment extends Fragment {
         reqPassword.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                //Intentionally left blank
             }
 
             @Override
@@ -140,7 +136,6 @@ public class LoginFragment extends Fragment {
         reqFirstName.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                //Intentionally left blank
             }
 
             @Override
@@ -158,7 +153,6 @@ public class LoginFragment extends Fragment {
         reqLastName.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                //Intentionally left blank
             }
 
             @Override
@@ -176,7 +170,6 @@ public class LoginFragment extends Fragment {
         reqEmail.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                //Intentionally left blank
             }
 
             @Override

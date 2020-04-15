@@ -18,10 +18,12 @@ import com.joanzapata.iconify.IconDrawable;
 import com.joanzapata.iconify.fonts.FontAwesomeIcons;
 import com.marinoo.familymap.R;
 import com.marinoo.familymap.cmodel.FamilyTree;
+import com.marinoo.familymap.cmodel.Filter;
 import com.marinoo.familymap.model.Event;
 import com.marinoo.familymap.model.Person;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class PersonActivity extends AppCompatActivity {
     private String selectedPersonID;
@@ -39,6 +41,9 @@ public class PersonActivity extends AppCompatActivity {
         ExpandableListView expandableListView = findViewById(R.id.expandableListView);
         List<Event> selectedPersonEvents = FamilyTree.getInstance().getPeoplesEventsMap().get(selectedPersonID);
         List<Person> selectedPersonFamilyMembers = getSelectedPersonFamilyMembers();
+
+        selectedPersonEvents = filterSelectedPersonEventsBySide(selectedPersonEvents);
+        selectedPersonEvents = filterSelectedPersonEventsByGender(selectedPersonEvents);
 
         expandableListView.setAdapter(new ExpandableListAdapter(this, selectedPersonEvents, selectedPersonFamilyMembers));
     }
@@ -318,6 +323,97 @@ public class PersonActivity extends AppCompatActivity {
                     Intent.FLAG_ACTIVITY_CLEAR_TOP); startActivity(intent);
         }
         return true;
+    }
+
+    private List<Event> filterSelectedPersonEventsByGender(List<Event> events) {
+
+
+        if (Filter.getInstance().isShowMaleEvents() && Filter.getInstance().isShowFemaleEvents()) {
+            return events;
+
+        } else if (Filter.getInstance().isShowFemaleEvents() && !Filter.getInstance().isShowMaleEvents()) {
+
+            List<Event> filteredEvents = new ArrayList<>();
+            for (Event event : events) {
+
+                Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+
+                if (person.getGender().equals("f")) {
+                    filteredEvents.add(event);
+                }
+            }
+            return filteredEvents;
+
+        } else if (Filter.getInstance().isShowMaleEvents() && !Filter.getInstance().isShowFemaleEvents()){
+
+            List<Event> filteredEvents = new ArrayList<>();
+            for (Event event : events) {
+
+                Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+
+                if (person.getGender().equals("m")) {
+                    filteredEvents.add(event);
+                }
+            }
+
+            return filteredEvents;
+
+        }else {
+
+            List<Event> filteredEvents = new ArrayList<>();
+            return filteredEvents;
+        }
+    }
+
+    private List<Event> filterSelectedPersonEventsBySide(List<Event> events) {
+
+        if (Filter.getInstance().isShowMotherSide() && Filter.getInstance().isShowFatherSide()) {
+            return events;
+
+        } else if (Filter.getInstance().isShowMotherSide() && !Filter.getInstance().isShowFatherSide()) {
+
+            List<Event> filteredEvents = new ArrayList<>();
+            Set<Person> maternalSet = FamilyTree.getInstance().getMaternalAncestors();
+            for (Event event : events) {
+
+                Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+                if (person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getPersonID())
+                        || person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getSpouseID())) {
+
+                    filteredEvents.add(event);
+                }
+
+                if (maternalSet.contains(person)) {
+                    filteredEvents.add(event);
+                }
+            }
+            return filteredEvents;
+
+        }else if (Filter.getInstance().isShowFatherSide() && !Filter.getInstance().isShowMotherSide()) {
+
+            List<Event> filteredEvents = new ArrayList<>();
+            Set<Person> paternalSet = FamilyTree.getInstance().getPaternalAncestors();
+            for (Event event : events) {
+
+                Person person = FamilyTree.getInstance().getPeopleMap().get(event.getPersonID());
+
+                if (person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getPersonID())
+                        || person.getPersonID().equals(FamilyTree.getInstance().getLoggedInUser().getSpouseID())) {
+
+                    filteredEvents.add(event);
+                }
+
+                if (paternalSet.contains(person)) {
+                    filteredEvents.add(event);
+                }
+            }
+            return filteredEvents;
+
+        } else {
+
+            List<Event> filteredEvents = new ArrayList<>();
+            return filteredEvents;
+        }
     }
 
     @SuppressLint("ResourceType")

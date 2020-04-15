@@ -36,7 +36,7 @@ public class FamilyTree {
         return instance;
     }
 
-    private FamilyTree() {
+    public FamilyTree() {
         loggedInUser = new Person();
         loggedIn = false;
         authToken = null;
@@ -68,9 +68,6 @@ public class FamilyTree {
             eventMap.put(event.getEventID(), event);
             makePeoplesEventMap(event);
         }
-        /*makeLoggedInUserEventTypes();
-        makeFemaleAncestorsEventTypes();
-        makeMaleAncestorsEventTypes();*/
         makeAllEventsType();
         initializeColorTypes();
     }
@@ -196,44 +193,6 @@ public class FamilyTree {
                 if (!allEventTypes.contains(currentEvents.get(i).getEventType().toLowerCase())) {
                     allEventTypes.add(currentEvents.get(i).getEventType().toLowerCase());
                 }
-            }
-        }
-    }
-
-    private void makeLoggedInUserEventTypes() {
-
-        ArrayList<Event> loggedInUserEvents = peoplesEventsMap.get(loggedInUser.getPersonID());
-        for (int i = 0; i < loggedInUserEvents.size(); i++) {
-            loggedInUserEventTypes.add(loggedInUserEvents.get(i).getEventType().toLowerCase());
-        }
-        allEventTypes.addAll(loggedInUserEventTypes);
-    }
-
-    private void makeFemaleAncestorsEventTypes() {
-
-        ArrayList<Event> usersMotherEvents = peoplesEventsMap.get(loggedInUser.getMotherID());
-        for (int i = 0; i < usersMotherEvents.size(); i++) {
-            femaleAncestorsEventTypes.add(usersMotherEvents.get(i).getEventType().toLowerCase());
-        }
-
-        for (String eventType : femaleAncestorsEventTypes) {
-
-            if (!allEventTypes.contains(eventType)) {
-                allEventTypes.add(eventType);
-            }
-        }
-    }
-
-    private void makeMaleAncestorsEventTypes() {
-
-        ArrayList<Event> usersFatherEvents = peoplesEventsMap.get(loggedInUser.getFatherID());
-        for (int i = 0; i < usersFatherEvents.size(); i++) {
-            maleAncestorsEventTypes.add(usersFatherEvents.get(i).getEventType().toLowerCase());
-        }
-        for (String eventType : maleAncestorsEventTypes) {
-
-            if (!allEventTypes.contains(eventType)) {
-                allEventTypes.add(eventType);
             }
         }
     }
